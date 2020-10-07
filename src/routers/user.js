@@ -25,7 +25,7 @@ router.post('/users/login', async (req,res) => {
     try {
         const user = await User.findByCredentials(req.body.email,req.body.password)
         const token = await user.generateAuthToken()
-        res.send({user,token})
+        res.send({user : user,token})
     } catch (e) {
         res.status(400).send()
     }
@@ -60,34 +60,7 @@ router.get('/users/me', auth ,async (req,res) => {
 })
 
 
-
-//fetch single user by id
-router.get('/users/:id',  async (req, res) => {
-    const _id = req.params.id // Access the id provided
-
-    try {
-        const user = await User.findById(_id)
-        if(!user)
-            return res.status(404).send()
-        res.send(user)    
-
-    } catch (e) {
-        res.status(500).send()
-    }
-    
-    // User.findById(_id).then((user) => {
-    //     if (!user) { // this will come if id is of 12 byte agr isse kam ya zada hogi to 500 wala error come
-    //     return res.status(404).send()
-    // }
-    // res.send(user)
-    // }).catch((e) => {
-    //  res.status(500).send()
-    // })
-})
-
-
-router.patch('/users/:id', async (req,res) => {
-    const _id=req.params.id
+router.patch('/users/me',auth, async (req,res) => {
     const updates=Object.keys(req.body)
     const allowedUpdates=['name','email','password','age']
     const isVaildOperation=updates.every((update) => {
@@ -97,36 +70,27 @@ router.patch('/users/:id', async (req,res) => {
     if(!isVaildOperation){
         return res.status(400).send({error: 'Invaild operation'})
     }
-
-
     try {
-        const user = await User.findById(_id)
-
         updates.forEach((update) => {
-            user[update]=req.body[update]
+            req.user[update]=req.body[update]
         })
-        await user.save()
-        //remove this because findByIdAndUpdate bypass the mongoose method so we remove so middleware work correctly
-        // const user =await User.findByIdAndUpdate(_id,req.body, { new : true ,runValidators: true})
-        if(!user){
-            return res.status(404).send()
-        }
-
-        res.send(user)
+        await req.user.save()
+        res.send(req.user)
     } catch (e){
         res.status(400).send()
     }
 
 })
 
-router.delete('/users/:id', async (req,res) =>{
+router.delete('/users/me',auth, async (req,res) =>{
 
     try {
-        const user= await User.findByIdAndDelete(req.params.id)
-        if(!user){
-            return res.status(404).send()
-        }
-        res.send(user)
+        // const user= await User.findByIdAndDelete(req.user._id)
+        // if(!user){
+        //     return res.status(404).send()
+        // }
+        await req.user.remove()
+        res.send(req.user)
 
     } catch (e) {
         res.status(500).send()
